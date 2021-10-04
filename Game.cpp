@@ -23,10 +23,12 @@ enum GameState
 
 // globals
 int Game;
+int Score;
 auto graphics(std::make_unique<Graphics>());
 static CComPtr<ID2D1Bitmap> pBackground;
 static CComPtr<ID2D1Bitmap> pPiece;
 static CComPtr<ID2D1Bitmap> pButton;
+static CComPtr<ID2D1Bitmap> pNumber;
 std::vector<Square> vStuckSquares;
 std::vector<int> SquaresToDelete;
 auto pattern_L(std::make_unique<Pattern>());
@@ -102,6 +104,15 @@ void RandomisePiece()
 		break;
 	}
 }
+D2D1_RECT_F GetNumberRect(int value)
+{
+	return {
+		static_cast<float>(value * 17),
+		0,
+		static_cast<float>((value + 1) * 17),
+		34.f
+	};
+}
 
 void Game_Reset()
 {
@@ -162,26 +173,6 @@ bool Game_Serve()
 	else
 		return false;
 }
-bool Game_Landed()
-{
-	if (!piece->CanMoveDown(vStuckSquares, grid_size_y))
-	{
-		for (const auto& sqr : piece->m_square)
-		{
-			// only add visible squares
-			if (sqr.show)
-				vStuckSquares.push_back({
-				piece->origin.x + sqr.x,
-				piece->origin.y + sqr.y,
-				true,
-				sqr.colour
-					});
-		}
-		return true;
-	}
-	else
-		return false;
-}
 void Game_Move()
 {
 	// fall timers
@@ -228,7 +219,27 @@ void Game_Move()
 		piece->RotateAntiClockwise(vStuckSquares, grid_size_x, grid_size_y);
 	}
 }
-bool Game_FoundMatch()
+bool Game_Land()
+{
+	if (!piece->CanMoveDown(vStuckSquares, grid_size_y))
+	{
+		for (const auto& sqr : piece->m_square)
+		{
+			// only add visible squares
+			if (sqr.show)
+				vStuckSquares.push_back({
+				piece->origin.x + sqr.x,
+				piece->origin.y + sqr.y,
+				true,
+				sqr.colour
+					});
+		}
+		return true;
+	}
+	else
+		return false;
+}
+bool Game_Match()
 {
 	// sort stuck squares in decending order so indexes wont be jumbled while erasing.
 	std::sort(vStuckSquares.begin(), vStuckSquares.end(), Sort_X_Decending);
@@ -260,7 +271,25 @@ bool Game_FoundMatch()
 	}
 	return SquaresToDelete.empty() ? false : true;
 }
-void Game_DestroyMatch()
+void Game_Score()
+{
+	switch (SquaresToDelete.size())
+	{
+	case 10:
+		Score += 100;
+		break;
+	case 20:
+		Score += 300;
+		break;
+	case 30:
+		Score += 500;
+		break;
+	case 40:
+		Score += 800;
+		break;
+	}
+}
+void Game_Destroy()
 {
 	std::sort(SquaresToDelete.begin(), SquaresToDelete.end(), Sort_Delete_Decending);
 
@@ -268,7 +297,7 @@ void Game_DestroyMatch()
 	for (const auto& x : SquaresToDelete)
 		vStuckSquares.erase(vStuckSquares.begin() + x);
 }
-bool Game_MovePieces()
+bool Game_Fall()
 {
 	bool squareMoved(false); // will remain false unless pieces move down.
 
@@ -305,6 +334,7 @@ void GameInit(HWND hWnd)
 	graphics->CreateBitmap(L"Assets/Textures/Board.png", &pBackground);
 	graphics->CreateBitmap(L"Assets/Textures/piece.png", &pPiece);
 	graphics->CreateBitmap(L"Assets/Textures/button.png", &pButton);
+	graphics->CreateBitmap(L"Assets/Textures/number.png", &pNumber);
 
 	// create shapes
 	pattern_L->up = {
@@ -481,6 +511,7 @@ void GameInit(HWND hWnd)
 	};
 
 	Game = 0;
+	Score = 0;
 
 	// init random for piece selection
 	LARGE_INTEGER li;
@@ -514,16 +545,19 @@ void GameUpdate(float dt)
 		break;
 
 	case GAME_PLAYING:
-		if (Game_Landed())
+		if (Game_Land())
 			Game = GAME_CHECKING;
 		else
 			Game_Move();
 		break;
 
 	case GAME_CHECKING:
-		if (Game_FoundMatch())
-			Game_DestroyMatch();
-		if (!Game_MovePieces())
+		if (Game_Match())
+		{
+			Game_Score();
+			Game_Destroy();
+		}
+		if (!Game_Fall())
 			Game = GAME_SERVE;
 		break;
 
@@ -544,7 +578,32 @@ void GameRender()
 {
 	graphics->BeginDraw();
 	graphics->ClearScreen();
+
 	graphics->DrawBitmap(&pBackground.p, D2D1::RectF(0, 0, 220.f, 460.f));
+
+	// score (13 from edge, 14 from top, 17x34)
+
+	std::string str(std::to_string(Score));
+	while (str.size() < 6)
+		str.insert(0, "0");
+	int dgt1(str.at(0) - '0');
+	int dgt2(str.at(1) - '0');
+	int dgt3(str.at(2) - '0');
+	int dgt4(str.at(3) - '0');
+	int dgt5(str.at(4) - '0');
+	int dgt6(str.at(5) - '0');
+
+
+	graphics->DrawBitmapArea(&pNumber.p, { 13.f,  14.f, 29.f,  48.f }, { 0, 0, 17.f, 34.f });
+	graphics->DrawBitmapArea(&pNumber.p, { 33.f,  14.f, 49.f,  48.f }, { 0, 0, 17.f, 34.f });
+	graphics->DrawBitmapArea(&pNumber.p, { 53.f,  14.f, 69.f,  48.f }, GetNumberRect(dgt3));
+	graphics->DrawBitmapArea(&pNumber.p, { 73.f,  14.f, 89.f,  48.f }, GetNumberRect(dgt4));
+	graphics->DrawBitmapArea(&pNumber.p, { 93.f,  14.f, 109.f, 48.f }, GetNumberRect(dgt5));
+	graphics->DrawBitmapArea(&pNumber.p, { 113.f, 14.f, 129.f, 48.f }, GetNumberRect(dgt6));
+
+
+
+
 	// player piece
 	for (size_t i = 0; i < piece->m_square.size(); ++i)
 	{
@@ -577,6 +636,7 @@ void GameRender()
 			}
 		}
 	}
+
 	// stuck pieces
 	for (size_t i = 0; i < vStuckSquares.size(); ++i)
 	{
@@ -633,6 +693,7 @@ void GameRender()
 			break;
 		}
 	}
+
 	// lose menu
 	if (Game == GAME_LOSE)
 	{
@@ -653,6 +714,7 @@ void GameRender()
 			)
 			graphics->DrawRect(button_exit);
 	}
+
 	graphics->EndDraw();
 }
 

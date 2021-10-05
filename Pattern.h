@@ -10,4 +10,5 @@ public:
 	std::array<bool, 16> left;
 	Pattern();
 	~Pattern();
+	bool operator == (const Pattern& p);
 };

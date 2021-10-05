@@ -12,18 +12,24 @@
 #include <sstream> // to_wstring
 #include <stdlib.h> // srand(), rand()
 
-enum GameState
+enum GameStates
 {
 	GAME_PAUSE,
-	GAME_SERVE,
-	GAME_PLAYING,
-	GAME_CHECKING,
+	GAME_PLAY,
 	GAME_LOSE
 };
 
+enum PlayStates
+{
+	PLAY_SERVING,
+	PLAY_MOVING,
+	PLAY_CHECKING,
+};
+
 // globals
-int Game;
-int Score;
+int GameState;
+int PlayState;
+int CurrentScore;
 auto graphics(std::make_unique<Graphics>());
 static CComPtr<ID2D1Bitmap> pBackground;
 static CComPtr<ID2D1Bitmap> pPiece;
@@ -45,6 +51,9 @@ int grid_size_y;
 D2D1_RECT_F button_retry;
 D2D1_RECT_F button_exit;
 D2D1_RECT_F button_pause;
+D2D1_RECT_F button_resume;
+Pattern nextPattern;
+int nextColour;
 
 
 // game functions
@@ -64,45 +73,11 @@ D2D1_RECT_F GetGridRect(int x, int y)
 {
 	// L T R B
 	return {
-		static_cast<float>(x)     * 20.f + 10.f,
-		static_cast<float>(y)     * 20.f + 50.f,
-		static_cast<float>(x + 1) * 20.f + 9.f,
-		static_cast<float>(y + 1) * 20.f + 49.f
+		static_cast<float>(x)     * 20.f,
+		static_cast<float>(y)     * 20.f + 80.f,
+		static_cast<float>(x + 1) * 20.f,
+		static_cast<float>(y + 1) * 20.f + 79.f
 	};
-}
-void RandomisePiece()
-{
-	switch (rand() % 7)
-	{
-	case 0:
-		piece->m_pattern = *pattern_L;
-		piece->SetColour(4); // orange
-		break;
-	case 1:
-		piece->m_pattern = *pattern_J;
-		piece->SetColour(1); // blue
-		break;
-	case 2:
-		piece->m_pattern = *pattern_S;
-		piece->SetColour(6); // green
-		break;
-	case 3:
-		piece->m_pattern = *pattern_Z;
-		piece->SetColour(3); // red
-		break;
-	case 4:
-		piece->m_pattern = *pattern_T;
-		piece->SetColour(2); // purple
-		break;
-	case 5:
-		piece->m_pattern = *pattern_I;
-		piece->SetColour(0); // cyan
-		break;
-	case 6:
-		piece->m_pattern = *pattern_O;
-		piece->SetColour(5); // yellow
-		break;
-	}
 }
 D2D1_RECT_F GetNumberRect(int value)
 {
@@ -114,13 +89,20 @@ D2D1_RECT_F GetNumberRect(int value)
 	};
 }
 
-void Game_Reset()
+bool Game_Resume()
 {
-	vStuckSquares.clear();
+	if (input_1->CheckDown(BTN_LMB) &&
+		input_1->Mouse.x > button_resume.left &&
+		input_1->Mouse.x < button_resume.right &&
+		input_1->Mouse.y > button_resume.top &&
+		input_1->Mouse.y < button_resume.bottom
+		)
+		return true;
+	else
+		return false;
 }
 bool Game_Retry()
 {
-	OutputDebugString(L"Game Lost\n");
 	if (input_1->CheckDown(BTN_LMB) &&
 		input_1->Mouse.x > button_retry.left &&
 		input_1->Mouse.x < button_retry.right &&
@@ -133,7 +115,6 @@ bool Game_Retry()
 }
 void Game_Exit()
 {
-	OutputDebugString(L"Game Lost\n");
 	if (input_1->CheckDown(BTN_LMB) &&
 		input_1->Mouse.x > button_exit.left &&
 		input_1->Mouse.x < button_exit.right &&
@@ -142,15 +123,56 @@ void Game_Exit()
 		)
 		PostQuitMessage(0);
 }
-
-bool Game_Serve()
+void Play_NewGame()
 {
-	OutputDebugString(L"Game Serve\n");
-
-	RandomisePiece();
+	vStuckSquares.clear();
+	CurrentScore = 0;
+}
+void Play_QueuePiece()
+{
+	switch (rand() % 7)
+	//switch (5)
+	{
+	case 0:
+		nextPattern = *pattern_L;
+		nextColour = 4; // orange
+		break;
+	case 1:
+		nextPattern = *pattern_J;
+		nextColour = 1; // blue
+		break;
+	case 2:
+		nextPattern = *pattern_S;
+		nextColour = 6; // green
+		break;
+	case 3:
+		nextPattern = *pattern_Z;
+		nextColour = 3; // red
+		break;
+	case 4:
+		nextPattern = *pattern_T;
+		nextColour = 2; // purple
+		break;
+	case 5:
+		nextPattern = *pattern_I;
+		nextColour = 0; // cyan
+		break;
+	case 6:
+		nextPattern = *pattern_O;
+		nextColour = 5; // yellow
+		break;
+	}
+}
+bool Play_Serve()
+{
+	// get new piece ready
+	piece->m_pattern = nextPattern;
+	piece->SetColour(nextColour);
 	piece->origin = { 3,0 };
 	piece->rotation = 0;
 	piece->SetSquare(piece->m_pattern.up);
+	piece->timeSinceMovedDown = 0;
+	piece->timeSinceFall = 0;
 
 	// check if there's room to serve before serving
 	bool overlap(false);
@@ -166,36 +188,34 @@ bool Game_Serve()
 			}
 		}
 	}
-
-
-	if (!overlap)
-		return true;
-	else
-		return false;
+	return !overlap;
 }
-void Game_Move()
+void Play_Move()
 {
 	// fall timers
 	piece->timeSinceFall += deltaTime;
 	piece->timeSinceMovedDown += deltaTime;
-	// initial press fall
-	if (input_1->CheckPressed(BTN_S))
+	if (piece->CanMoveDown(vStuckSquares, grid_size_y))
 	{
-		piece->timeSinceFall = 0;
-		piece->timeSinceMovedDown = 0;
-		++piece->origin.y;
-	}
-	// holfing fall
-	else if (input_1->CheckDown(BTN_S) && piece->timeSinceMovedDown > 200.f && piece->timeSinceFall > 100.f)
-	{
-		piece->timeSinceFall = 0;
-		++piece->origin.y;
-	}
-	// auto fall
-	else if (piece->timeSinceFall > 1000.f)
-	{
-		piece->timeSinceFall = 0;
-		++piece->origin.y;
+		// initial press fall
+		if (input_1->CheckPressed(BTN_S))
+		{
+			piece->timeSinceFall = 0;
+			piece->timeSinceMovedDown = 0;
+			++piece->origin.y;
+		}
+		// holfing fall
+		else if (input_1->CheckDown(BTN_S) && piece->timeSinceMovedDown > 200.f && piece->timeSinceFall > 100.f)
+		{
+			piece->timeSinceFall = 0;
+			++piece->origin.y;
+		}
+		// auto fall
+		else if (piece->timeSinceFall > 1000.f)
+		{
+			piece->timeSinceFall = 0;
+			++piece->origin.y;
+		}
 	}
 
 	// move left
@@ -208,6 +228,7 @@ void Game_Move()
 	{
 		++piece->origin.x;
 	}
+
 	// rotate clockwise
 	if (input_1->CheckPressed(BTN_E))
 	{
@@ -219,27 +240,36 @@ void Game_Move()
 		piece->RotateAntiClockwise(vStuckSquares, grid_size_x, grid_size_y);
 	}
 }
-bool Game_Land()
+bool Play_Land()
 {
 	if (!piece->CanMoveDown(vStuckSquares, grid_size_y))
 	{
-		for (const auto& sqr : piece->m_square)
+		piece->timeSinceLanded += deltaTime;
+		if (piece->timeSinceLanded > 1000.f)
 		{
-			// only add visible squares
-			if (sqr.show)
-				vStuckSquares.push_back({
-				piece->origin.x + sqr.x,
-				piece->origin.y + sqr.y,
-				true,
-				sqr.colour
-					});
+			for (const auto& sqr : piece->m_square)
+			{
+				// only add visible squares
+				if (sqr.show)
+					vStuckSquares.push_back({
+					piece->origin.x + sqr.x,
+					piece->origin.y + sqr.y,
+					true,
+					sqr.colour
+						});
+			}
+			return true;
 		}
-		return true;
+		else
+			return false;
 	}
 	else
+	{
+		piece->timeSinceLanded = 0;
 		return false;
+	}
 }
-bool Game_Match()
+bool Play_Match()
 {
 	// sort stuck squares in decending order so indexes wont be jumbled while erasing.
 	std::sort(vStuckSquares.begin(), vStuckSquares.end(), Sort_X_Decending);
@@ -271,25 +301,25 @@ bool Game_Match()
 	}
 	return SquaresToDelete.empty() ? false : true;
 }
-void Game_Score()
+void Play_Score()
 {
 	switch (SquaresToDelete.size())
 	{
-	case 10:
-		Score += 100;
+	case 10: // single
+		CurrentScore += 100;
 		break;
-	case 20:
-		Score += 300;
+	case 20: // double
+		CurrentScore += 300;
 		break;
-	case 30:
-		Score += 500;
+	case 30: // triple
+		CurrentScore += 500;
 		break;
-	case 40:
-		Score += 800;
+	case 40: // tetris
+		CurrentScore += 800;
 		break;
 	}
 }
-void Game_Destroy()
+void Play_Destroy()
 {
 	std::sort(SquaresToDelete.begin(), SquaresToDelete.end(), Sort_Delete_Decending);
 
@@ -297,7 +327,7 @@ void Game_Destroy()
 	for (const auto& x : SquaresToDelete)
 		vStuckSquares.erase(vStuckSquares.begin() + x);
 }
-bool Game_Fall()
+bool Play_Fall()
 {
 	bool squareMoved(false); // will remain false unless pieces move down.
 
@@ -324,7 +354,6 @@ bool Game_Fall()
 	}
 	return squareMoved;
 }
-
 
 /********************** Main game functions **********************/
 void GameInit(HWND hWnd)
@@ -510,22 +539,24 @@ void GameInit(HWND hWnd)
 		1,1,0,0
 	};
 
-	Game = 0;
-	Score = 0;
+	GameState = GAME_PLAY;
+	PlayState = PLAY_SERVING;
+	CurrentScore = 0;
 
 	// init random for piece selection
 	LARGE_INTEGER li;
 	QueryPerformanceCounter(&li);
 	srand(static_cast<unsigned int>(li.QuadPart));
-	RandomisePiece();
+	Play_QueuePiece();
 
 	// grid dimensions
 	grid_size_x = 9;
 	grid_size_y = 19;
 
 	// button rects
-	button_retry = { 50.f,90.f,170.f,150.f};
-	button_exit = { 50.f,190.f,170.f,250.f };
+	button_retry =	{ 40.f, 140.f, 160.f, 200.f };
+	button_resume = { 40.f, 140.f, 160.f, 200.f };
+	button_exit =	{ 40.f, 240.f, 160.f, 300.f };
 
 }
 
@@ -533,43 +564,59 @@ void GameUpdate(float dt)
 {
 	deltaTime = dt;
 
-	switch (Game)
+	switch (GameState)
 	{
+		/************** Game is Paused ************/
 	case GAME_PAUSE:
-
-	case GAME_SERVE:
-		if (Game_Serve())
-			Game = GAME_PLAYING;
-		else
-			Game = GAME_LOSE;
+		if (Game_Resume() || input_1->CheckPressed(BTN_ESC)) GameState = GAME_PLAY;
+		Game_Exit();
 		break;
 
-	case GAME_PLAYING:
-		if (Game_Land())
-			Game = GAME_CHECKING;
-		else
-			Game_Move();
-		break;
+		/************** Game is Playing ************/
+	case GAME_PLAY:
+		if (input_1->CheckPressed(BTN_ESC))
+			GameState = GAME_PAUSE;
 
-	case GAME_CHECKING:
-		if (Game_Match())
+		switch (PlayState)
 		{
-			Game_Score();
-			Game_Destroy();
+		case PLAY_SERVING:
+			if (Play_Serve())
+			{
+				Play_QueuePiece();
+				PlayState = PLAY_MOVING;
+			}
+			else GameState = GAME_LOSE;
+			break;
+
+		case PLAY_MOVING:
+			if (Play_Land()) PlayState = PLAY_CHECKING;
+			else Play_Move();
+			break;
+
+		case PLAY_CHECKING:
+			if (Play_Match())
+			{
+				Play_Score();
+				Play_Destroy();
+			}
+			if (!Play_Fall()) PlayState = PLAY_SERVING;
+			break;
 		}
-		if (!Game_Fall())
-			Game = GAME_SERVE;
 		break;
 
+		/************** Game is Lost ************/
 	case GAME_LOSE:
 		if (Game_Retry())
 		{
-			Game_Reset();
-			Game = GAME_SERVE;
+			GameState = GAME_PLAY;
+			PlayState = PLAY_SERVING;
+			Play_NewGame();
 		}
 		Game_Exit();
 		break;
 	}
+
+
 
 
 }
@@ -579,35 +626,151 @@ void GameRender()
 	graphics->BeginDraw();
 	graphics->ClearScreen();
 
-	graphics->DrawBitmap(&pBackground.p, D2D1::RectF(0, 0, 220.f, 460.f));
+	graphics->DrawBitmap(&pBackground.p, D2D1::RectF(0, 0, 200.f, 480.f));
 
-	// score (13 from edge, 14 from top, 17x34)
-
-	std::string str(std::to_string(Score));
+	// scoring
+	// convert score to string to break into digits
+	std::string str(std::to_string(CurrentScore));
 	while (str.size() < 6)
 		str.insert(0, "0");
-	int dgt1(str.at(0) - '0');
-	int dgt2(str.at(1) - '0');
-	int dgt3(str.at(2) - '0');
-	int dgt4(str.at(3) - '0');
-	int dgt5(str.at(4) - '0');
-	int dgt6(str.at(5) - '0');
+	graphics->DrawBitmapArea(&pNumber.p, { 3.f,   4.f, 19.f,  38.f }, GetNumberRect(str.at(0) - '0'));
+	graphics->DrawBitmapArea(&pNumber.p, { 23.f,  4.f, 39.f,  38.f }, GetNumberRect(str.at(1) - '0'));
+	graphics->DrawBitmapArea(&pNumber.p, { 43.f,  4.f, 59.f,  38.f }, GetNumberRect(str.at(2) - '0'));
+	graphics->DrawBitmapArea(&pNumber.p, { 63.f,  4.f, 79.f,  38.f }, GetNumberRect(str.at(3) - '0'));
+	graphics->DrawBitmapArea(&pNumber.p, { 83.f,  4.f, 99.f,  38.f }, GetNumberRect(str.at(4) - '0'));
+	graphics->DrawBitmapArea(&pNumber.p, { 103.f, 4.f, 119.f, 38.f }, GetNumberRect(str.at(5) - '0'));
 
+	// next piece
+	D2D1_RECT_F nextPieceRect{ 125.f,5.f,195.f,75.f };
+	float npXBound(nextPieceRect.right - nextPieceRect.left);
+	float npYBound(nextPieceRect.bottom - nextPieceRect.top);
+	std::vector<D2D1_RECT_F> vNextPieceRect;
+	float npX(0); // total x size of next piece
+	float npY(0); // total y size of next piece
+	float npYMax(72.f);
+	float scale(1.f);
+	// set relative locationss
+	for (size_t i = 0; i < nextPattern.up.size(); i++)
+	{
+		if (nextPattern.up.at(i))
+		{
+			// A marks default location
+			// 0 0 0 0
+			// 0 0 0 0
+			// 0 0 0 0
+			// A 0 0 0
+			// x will move right
+			// y will move up
 
-	graphics->DrawBitmapArea(&pNumber.p, { 13.f,  14.f, 29.f,  48.f }, { 0, 0, 17.f, 34.f });
-	graphics->DrawBitmapArea(&pNumber.p, { 33.f,  14.f, 49.f,  48.f }, { 0, 0, 17.f, 34.f });
-	graphics->DrawBitmapArea(&pNumber.p, { 53.f,  14.f, 69.f,  48.f }, GetNumberRect(dgt3));
-	graphics->DrawBitmapArea(&pNumber.p, { 73.f,  14.f, 89.f,  48.f }, GetNumberRect(dgt4));
-	graphics->DrawBitmapArea(&pNumber.p, { 93.f,  14.f, 109.f, 48.f }, GetNumberRect(dgt5));
-	graphics->DrawBitmapArea(&pNumber.p, { 113.f, 14.f, 129.f, 48.f }, GetNumberRect(dgt6));
+			vNextPieceRect.push_back({ 0,54.f,18.f,72.f }); // create a square sized rect originating from bottom left (A on above comment)
+			// x
+			if		(i == 0 || i == 4 || i == 8  || i == 12)
+			{
+				if (npX < 18.f) npX = 18.f;
+			}
+			else if (i == 1 || i == 5 || i == 9  || i == 13)
+			{
+				vNextPieceRect.back().left  += 18.f;
+				vNextPieceRect.back().right += 18.f;
+				if (npX < 36.f) npX = 36.f;
+			}
+			else if (i == 2 || i == 6 || i == 10 || i == 14)
+			{
+				vNextPieceRect.back().left  += 36.f;
+				vNextPieceRect.back().right += 36.f;
+				if (npX < 54.f) npX = 54.f;
+			}
+			else if (i == 3 || i == 7 || i == 11 || i == 15)
+			{
+				vNextPieceRect.back().left  += 54.f;
+				vNextPieceRect.back().right += 54.f;
+				if (npX < 72.f) npX = 72.f;
+			}
+			// y
+			if		(i == 15 || i == 14 || i == 13 || i == 12)
+			{
+				if (npY < 18.f) npY = 18.f;
+			}
+			else if (i == 11 || i == 10 || i == 9  || i == 8)
+			{
+				vNextPieceRect.back().top	 -= 18.f;
+				vNextPieceRect.back().bottom -= 18.f;
+				if (npY < 36.f) npY = 36.f;
+			}
+			else if (i == 7  || i == 6  || i == 5  || i == 4)
+			{
+				vNextPieceRect.back().top	 -= 36.f;
+				vNextPieceRect.back().bottom -= 36.f;
+				if (npY < 54.f) npY = 54.f;
+			}
+			else if (i == 3  || i == 2  || i == 1  || i == 0)
+			{
+				vNextPieceRect.back().top	 -= 54.f;
+				vNextPieceRect.back().bottom -= 54.f;
+				if (npY < 72.f) npY = 72.f;
+			}
+		}
+	}
+	// set board locatioins
+	for (auto& nxtPce : vNextPieceRect)
+	{
+		// adjust y to top so its the same as x
+		nxtPce.top	  -= npYMax - npY;
+		nxtPce.bottom -= npYMax - npY;
+		
+		// shrink if piece goes over bounds
+		if (npX > npXBound)
+		{
+			scale = npXBound / npX;
+			npX *= scale;
+			npY *= scale;
+		}
+		else if (npY > npYBound)
+		{
+			scale = npYBound / npY;
+			npX *= scale;
+			npY *= scale;
+		}
+		
+		// put in center of area
+		nxtPce.left   += nextPieceRect.left + (npXBound - npX) / 2.f;
+		nxtPce.right  += nextPieceRect.left + (npXBound - npX) / 2.f;
+		nxtPce.top	  += nextPieceRect.top  + (npYBound - npY) / 2.f;
+		nxtPce.bottom += nextPieceRect.top  + (npYBound - npY) / 2.f;
 
+		graphics->DrawBitmapArea(&pPiece.p, nxtPce, { 0,0,18.f,18.f });
 
+		switch (nextColour)
+		{
+		case 0:
+			graphics->DrawBitmapArea(&pPiece.p, nxtPce, { 0,0,18.f,18.f });
+			break;
+		case 1:
+			graphics->DrawBitmapArea(&pPiece.p, nxtPce, { 18.f,0,36.f,18.f });
+			break;
+		case 2:
+			graphics->DrawBitmapArea(&pPiece.p, nxtPce, { 36.f,0,54.f,18.f });
+			break;
+		case 3:
+			graphics->DrawBitmapArea(&pPiece.p, nxtPce, { 0,18.f,18.f,36.f });
+			break;
+		case 4:
+			graphics->DrawBitmapArea(&pPiece.p, nxtPce, { 18.f,18.f,36.f,36.f });
+			break;
+		case 5:
+			graphics->DrawBitmapArea(&pPiece.p, nxtPce, { 36.f,18.f,54.f,36.f });
+			break;
+		case 6:
+			graphics->DrawBitmapArea(&pPiece.p, nxtPce, { 0,36.f,18.f,54.f });
+			break;
+		}
 
+	}
 
 	// player piece
 	for (size_t i = 0; i < piece->m_square.size(); ++i)
 	{
-		if (Game != GAME_LOSE && piece->m_square.at(i).show)
+		if (PlayState != GAME_LOSE && piece->m_square.at(i).show)
 		{
 			// render piece according to colour
 			switch (piece->m_square.at(i).colour)
@@ -694,11 +857,11 @@ void GameRender()
 		}
 	}
 
-	// lose menu
-	if (Game == GAME_LOSE)
+	// menus
+	if (GameState == GAME_LOSE)
 	{
-		graphics->DrawBitmapArea(&pButton.p, button_retry, { 0,0,120.f,60.f });
-		graphics->DrawBitmapArea(&pButton.p, button_exit, { 0,60.f,120.f,120.f });
+		graphics->DrawBitmapArea(&pButton.p, button_retry, { 0, 0,    120.f, 60.f });
+		graphics->DrawBitmapArea(&pButton.p, button_exit,  { 0, 60.f, 120.f, 120.f });
 
 		if (input_1->Mouse.x > button_retry.left &&
 			input_1->Mouse.x < button_retry.right &&
@@ -706,6 +869,25 @@ void GameRender()
 			input_1->Mouse.y < button_retry.bottom
 			)
 			graphics->DrawRect(button_retry);
+
+		if (input_1->Mouse.x > button_exit.left &&
+			input_1->Mouse.x < button_exit.right &&
+			input_1->Mouse.y > button_exit.top &&
+			input_1->Mouse.y < button_exit.bottom
+			)
+			graphics->DrawRect(button_exit);
+	}
+	else if (GameState == GAME_PAUSE)
+	{
+		graphics->DrawBitmapArea(&pButton.p, button_resume, { 120.f, 0,	   240.f, 60.f  });
+		graphics->DrawBitmapArea(&pButton.p, button_exit,	{ 0,	 60.f, 120.f, 120.f });
+
+		if (input_1->Mouse.x > button_resume.left &&
+			input_1->Mouse.x < button_resume.right &&
+			input_1->Mouse.y > button_resume.top &&
+			input_1->Mouse.y < button_resume.bottom
+			)
+			graphics->DrawRect(button_resume);
 
 		if (input_1->Mouse.x > button_exit.left &&
 			input_1->Mouse.x < button_exit.right &&

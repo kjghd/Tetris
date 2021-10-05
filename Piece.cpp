@@ -27,10 +27,10 @@ void Piece::SetSquare(const std::array<bool, 16>& pattern)
 D2D1_RECT_F Piece::GetSquareRect(int index)
 {
 	return {
-		static_cast<float>(origin.x + m_square[index].x) * 20.f + 10.f,
-		static_cast<float>(origin.y + m_square[index].y) * 20.f + 50.f,
-		static_cast<float>(origin.x + m_square[index].x + 1) * 20.f + 9.f,
-		static_cast<float>(origin.y + m_square[index].y + 1) * 20.f + 49.f
+		static_cast<float>(origin.x + m_square[index].x)	 * 20.f,
+		static_cast<float>(origin.y + m_square[index].y)	 * 20.f + 80.f,
+		static_cast<float>(origin.x + m_square[index].x + 1) * 20.f,
+		static_cast<float>(origin.y + m_square[index].y + 1) * 20.f + 79.f
 	};
 }
 bool Piece::CanMoveLeft(const std::vector<Square>& set_squares)

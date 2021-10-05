@@ -27,6 +27,7 @@ enum Buttons
 	BTN_DOWN,
 
 	BTN_ENTER,
+	BTN_ESC,
 
 	BTN_COUNT
 };

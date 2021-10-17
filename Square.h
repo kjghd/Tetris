@@ -3,10 +3,9 @@
 
 struct Square
 {
-	int x;
-	int y;
-	bool show;
-	int colour;
-	bool operator == (Square s) { return s.x == x && s.y == y && s.show == show; };
+	int x; // X grid location.
+	int y; // X grid location.
+	int colour = 0;
+	bool operator == (Square s) { return s.x == x && s.y == y; };
 };
 

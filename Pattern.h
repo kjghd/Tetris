@@ -4,11 +4,14 @@
 class Pattern
 {
 public:
-	std::array<bool, 16> up;
-	std::array<bool, 16> right;
-	std::array<bool, 16> down;
-	std::array<bool, 16> left;
+	std::array<bool, 16> A;
+	std::array<bool, 16> B;
+	std::array<bool, 16> C;
+	std::array<bool, 16> D;
+	int colour;
+
+
+
 	Pattern();
 	~Pattern();
-	bool operator == (const Pattern& p);
 };

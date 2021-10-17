@@ -61,9 +61,9 @@ void Graphics::EndDraw()
 	pRenderTarget->EndDraw();
 }
 
-void Graphics::ClearScreen(float r, float g, float b)
+void Graphics::ClearScreen(float r, float g, float b, float a)
 {
-	pRenderTarget->Clear(D2D1::ColorF(r, g, b));
+	pRenderTarget->Clear(D2D1::ColorF(r, g, b, a));
 }
 
 void Graphics::DrawBitmap(ID2D1Bitmap** ppBmp, D2D1_RECT_F destination)

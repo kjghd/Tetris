@@ -1,205 +1,106 @@
 #include "Piece.h"
 
+D2D1_RECT_F Piece::GetRect(int index)
+{
+	if (pattern->A.at(index))
+	{
+		// x and y position of pattern square at index
+		float x = index - (index / 4 * 4);
+		float y = index / 4;
 
-Piece::Piece(int origin_x, int origin_y)
-	:
-	origin({ origin_x, origin_y }),
-	rotation(0),
-	timeSinceFall(0),
-	timeSinceLanded(0),
-	timeSinceMovedDown(0)
-{
-	for (size_t i = 0; i < m_square.size(); ++i)
-	{
-		m_square[i].x = i - (floor(i / 4) * 4);
-		m_square[i].y = floor(i / 4);
-	}
-}
-Piece::~Piece()
-{
-}
+		// get starting index
+		int x_start(3);
+		int y_start(3);
 
-void Piece::SetSquare(const std::array<bool, 16>& pattern)
-{
-	for (size_t i = 0; i < pattern.size(); ++i)
-		m_square[i].show = pattern[i];
-}
-D2D1_RECT_F Piece::GetSquareRect(int index)
-{
-	return {
-		static_cast<float>(origin.x + m_square[index].x)	 * 20.f,
-		static_cast<float>(origin.y + m_square[index].y)	 * 20.f + 80.f,
-		static_cast<float>(origin.x + m_square[index].x + 1) * 20.f,
-		static_cast<float>(origin.y + m_square[index].y + 1) * 20.f + 79.f
-	};
-}
-bool Piece::CanMoveLeft(const std::vector<Square>& set_squares)
-{
-	// check hit left wall
-	for (const auto& value : m_square)
-	{
-		if (value.show && origin.x + value.x <= 0)
-			return false;
-	}
-	// check hit stuck squares
-	for (size_t i = 0; i < m_square.size(); ++i)
-	{
-		if (m_square[i].show)
+		// get total x and y length
+		std::array<bool, 4> arr_x{ false,false,false,false };
+		std::array<bool, 4> arr_y{ false,false,false,false };
+		for (size_t i = 0; i < pattern->A.size(); i++)
 		{
-			for (size_t ii = 0; ii < set_squares.size(); ++ii)
+			if (pattern->A.at(i))
 			{
-				if (origin.y + m_square[i].y == set_squares[ii].y && origin.x + m_square[i].x - 1 == set_squares[ii].x)
-				{
-					return false;
-				}
-			}
-		}
-	}
-	return true;
-}
-bool Piece::CanMoveRight(const std::vector<Square>& set_squares, int grid_sz_x)
-{
-	// check hit right wall
-	for (const auto& value : m_square)
-	{
-		if (value.show && origin.x + value.x >= grid_sz_x)
-			return false;
-	}
-	// check hit stuck squares
-	for (size_t i = 0; i < m_square.size(); ++i)
-	{
-		if (m_square[i].show)
-		{
-			for (size_t ii = 0; ii < set_squares.size(); ++ii)
-			{
-				if (origin.y + m_square[i].y == set_squares[ii].y && origin.x + m_square[i].x + 1 == set_squares[ii].x)
-				{
-					return false;
-				}
-			}
-		}
-	}
-	return true;
-}
-bool Piece::CanMoveDown(const std::vector<Square>& set_squares, int grid_sz_y)
-{
-	// check hit bottom
-	for (const auto& value : m_square)
-	{
-		if (value.show && origin.y + value.y >= grid_sz_y)
-			return false;
-	}
-	// check hit stuck squares
-	for (size_t i = 0; i < m_square.size(); ++i)
-	{
-		if (m_square[i].show)
-		{
-			for (size_t ii = 0; ii < set_squares.size(); ++ii)
-			{
-				if (origin.y + m_square[i].y + 1 == set_squares[ii].y && origin.x + m_square[i].x == set_squares[ii].x)
-				{
-					return false;
-				}
-			}
-		}
-	}
-	return true;
-}
-bool Piece::CanRotate(const std::array<bool, 16>& pattern, const std::vector<Square>& set_squares, int grid_sz_x, int grid_sz_y)
-{
-	for (size_t i = 0; i < pattern.size(); i++)
-	{
-		// check if target pattern will be past right side
-		if (pattern[i] && origin.x + m_square[i].x > grid_sz_x ||
-			pattern[i] && origin.y + m_square[i].y > grid_sz_y)
-		{
-			return false;
-		}
-		for (size_t ii = 0; ii < set_squares.size(); ii++)
-		{
-			if (pattern[i] &&
-				origin.x + m_square[i].x == set_squares[ii].x &&
-				origin.y + m_square[i].y == set_squares[ii].y)
-			{
-				return false;
+				arr_x.at(i - (i / 4 * 4)) = true;
+				arr_y.at(i / 4) = true;
+
+				if (i - (i / 4 * 4) < x_start)
+					x_start = i - (i / 4 * 4);
+				if (i / 4 < y_start)
+					y_start = i / 4;
 			}
 		}
 
+
+		int x_max(0);
+		int y_max(0);
+		for (const auto& b : arr_x)
+			if (b) ++x_max;
+		for (const auto& b : arr_y)
+			if (b) ++y_max;
+
+		// work out the size of each square
+		float scale = size / 4.f;
+
+		return {
+			// location				  // padding					 // square location
+			(location.x - size / 2) + ((size - x_max * scale) / 2) + ((x - x_start) * scale),
+			(location.y - size / 2) + ((size - y_max * scale) / 2) + ((y - y_start) * scale),
+			(location.x - size / 2) + ((size - x_max * scale) / 2) + ((x - x_start + 1) * scale),
+			(location.y - size / 2) + ((size - y_max * scale) / 2) + ((y - y_start + 1) * scale)
+		};
 	}
-	return true;
-}
-bool Piece::RotateClockwise(const std::vector<Square>& set_squares, int grid_sz_x, int grid_sz_y)
-{
-	switch (rotation)
+	else
+		return { 0,0,0,0 };
+	/*
+	if (pattern->A.at(index))
 	{
-	case 0: // if up set right
-		if (CanRotate(m_pattern.right, set_squares, grid_sz_x, grid_sz_y))
+		// x and y position of pattern square at index
+		float x = index - (index / 4 * 4);
+		float y = index / 4;
+
+		// get starting index
+		int x_start(3);
+		int y_start(3);
+
+
+		// get total x and y length
+		std::array<bool, 4> arr_x{ false,false,false,false };
+		std::array<bool, 4> arr_y{ false,false,false,false };
+		for (size_t i = 0; i < pattern->A.size(); i++)
 		{
-			rotation = 1;
-			SetSquare(m_pattern.right);
+			if (pattern->A.at(i))
+			{
+				arr_x.at(i - (i / 4 * 4)) = true;
+				arr_y.at(i / 4) = true;
+
+				if (i - (i / 4 * 4) < x_start)
+					x_start = i - (i / 4 * 4);
+				if (i / 4 < y_start)
+					y_start = i / 4;
+			}
 		}
-		break;
-	case 1: // if right set down
-		if (CanRotate(m_pattern.down, set_squares, grid_sz_x, grid_sz_y))
-		{
-			rotation = 2;
-			SetSquare(m_pattern.down);
-		}
-		break;
-	case 2: // if down set left
-		if (CanRotate(m_pattern.left, set_squares, grid_sz_x, grid_sz_y))
-		{
-			rotation = 3;
-			SetSquare(m_pattern.left);
-		}
-		break;
-	case 3: // if left set up
-		if (CanRotate(m_pattern.up, set_squares, grid_sz_x, grid_sz_y))
-		{
-			rotation = 0;
-			SetSquare(m_pattern.up);
-		}
-		break;
+			
+
+		int x_max(0);
+		int y_max(0);
+		for (const auto& b : arr_x)
+			if (b) ++x_max;
+		for (const auto& b : arr_y)
+			if (b) ++y_max;
+
+		// work out the size of each square
+		float scale = x_max > y_max ?
+			size / x_max :
+			size / y_max;
+
+		return {
+			// location				  // padding					 // square location
+			(location.x - size / 2) + ((size - x_max * scale) / 2) + ((x - x_start)		* scale),
+			(location.y - size / 2) + ((size - y_max * scale) / 2) + ((y - y_start)		* scale),
+			(location.x - size / 2) + ((size - x_max * scale) / 2) + ((x - x_start + 1) * scale),
+			(location.y - size / 2) + ((size - y_max * scale) / 2) + ((y - y_start + 1) * scale)
+		};
 	}
-	return true;
-}
-bool Piece::RotateAntiClockwise(const std::vector<Square>& set_squares, int grid_sz_x, int grid_sz_y)
-{
-	switch (rotation)
-	{
-	case 0: // if up set left
-		if (CanRotate(m_pattern.left, set_squares, grid_sz_x, grid_sz_y))
-		{
-			rotation = 3;
-			SetSquare(m_pattern.left);
-		}
-		break;
-	case 3: // if left set down
-		if (CanRotate(m_pattern.down, set_squares, grid_sz_x, grid_sz_y))
-		{
-			rotation = 2;
-			SetSquare(m_pattern.down);
-		}
-		break;
-	case 2: // if down set right
-		if (CanRotate(m_pattern.right, set_squares, grid_sz_x, grid_sz_y))
-		{
-			rotation = 1;
-			SetSquare(m_pattern.right);
-		}
-		break;
-	case 1: // if right set up
-		if (CanRotate(m_pattern.up, set_squares, grid_sz_x, grid_sz_y))
-		{
-			rotation = 0;
-			SetSquare(m_pattern.up);
-		}
-		break;
-	}
-	return true;
-}
-void Piece::SetColour(int colour)
-{
-	for (auto& sqr : m_square)
-		sqr.colour = colour;
+	else
+		return { 0,0,0,0 };
+	*/
 }

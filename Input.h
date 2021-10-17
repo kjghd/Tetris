@@ -26,6 +26,7 @@ enum Buttons
 	BTN_RIGHT,
 	BTN_DOWN,
 
+	BTN_SPACE,
 	BTN_ENTER,
 	BTN_ESC,
 

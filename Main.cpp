@@ -26,7 +26,7 @@ int CALLBACK wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPWSTR lpCmd
 	RegisterClass(&wc);
 
 	// Create Window.
-	RECT WndSize{ 0, 0, 200, 480 };
+	RECT WndSize{ 0, 0, 400, 600 };
 	AdjustWindowRect(&WndSize, WS_CAPTION, FALSE);
 	HWND hWindow{ CreateWindow(
 		wcName,
@@ -87,6 +87,8 @@ int CALLBACK wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPWSTR lpCmd
 				input_1->SetDown(BTN_UP,	VK_UP,		msg.wParam);
 				input_1->SetDown(BTN_RIGHT, VK_RIGHT,	msg.wParam);
 				input_1->SetDown(BTN_DOWN,	VK_DOWN,	msg.wParam);
+				input_1->SetDown(BTN_SPACE, VK_SPACE,	msg.wParam);
+				input_1->SetDown(BTN_ENTER, VK_RETURN,	msg.wParam);
 				input_1->SetDown(BTN_ESC,	VK_ESCAPE,	msg.wParam);
 				break;
 			case WM_KEYUP:
@@ -100,6 +102,8 @@ int CALLBACK wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPWSTR lpCmd
 				input_1->SetUp(BTN_UP,		VK_UP,		msg.wParam);
 				input_1->SetUp(BTN_RIGHT,	VK_RIGHT,	msg.wParam);
 				input_1->SetUp(BTN_DOWN,	VK_DOWN,	msg.wParam);
+				input_1->SetUp(BTN_SPACE,	VK_SPACE,	msg.wParam);
+				input_1->SetUp(BTN_ENTER,	VK_RETURN,	msg.wParam);
 				input_1->SetUp(BTN_ESC,		VK_ESCAPE,	msg.wParam);
 				break;
 			}

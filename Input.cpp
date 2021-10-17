@@ -17,6 +17,7 @@ void Input::SetDown(int button, DWORD vk_code, WPARAM wParam)
 }
 void Input::SetDownMouse(int button)
 {
+	m_button[button].moved = true;
 	m_button[button].down = true;
 }
 void Input::SetUp(int button, DWORD vk_code, WPARAM wParam)
@@ -29,6 +30,7 @@ void Input::SetUp(int button, DWORD vk_code, WPARAM wParam)
 }
 void Input::SetUpMouse(int button)
 {
+	m_button[button].moved = true;
 	m_button[button].down = false;
 }
 

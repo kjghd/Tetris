@@ -3,6 +3,12 @@
 
 class Button
 {
-	D2D1_RECT_F m_rect;
+public:
+	D2D1_POINT_2F location;
+	D2D1_POINT_2F size;
+	bool selected;
+	bool InRect(float x, float y);
+	bool InRect(D2D1_POINT_2F xy);
+	D2D1_RECT_F GetRect();
 
 };

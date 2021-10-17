@@ -148,22 +148,33 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="Button.cpp" />
+    <ClCompile Include="Counter.cpp" />
     <ClCompile Include="Game.cpp" />
     <ClCompile Include="Graphics.cpp" />
+    <ClCompile Include="Grid.cpp" />
     <ClCompile Include="Input.cpp" />
     <ClCompile Include="Main.cpp" />
+    <ClCompile Include="Menu.cpp" />
     <ClCompile Include="Pattern.cpp" />
     <ClCompile Include="Piece.cpp" />
-    <ClCompile Include="Square.cpp" />
+    <ClCompile Include="Player.cpp" />
+    <ClCompile Include="Pool.cpp" />
+    <ClCompile Include="Slider.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Button.h" />
     <ClInclude Include="Coord.h" />
+    <ClInclude Include="Counter.h" />
     <ClInclude Include="Game.h" />
     <ClInclude Include="Graphics.h" />
+    <ClInclude Include="Grid.h" />
     <ClInclude Include="Input.h" />
+    <ClInclude Include="Menu.h" />
     <ClInclude Include="Pattern.h" />
     <ClInclude Include="Piece.h" />
+    <ClInclude Include="Player.h" />
+    <ClInclude Include="Pool.h" />
+    <ClInclude Include="Slider.h" />
     <ClInclude Include="Square.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />

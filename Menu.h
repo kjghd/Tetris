@@ -1,12 +1,13 @@
 #pragma once
-#include "Button.h"
+#include "MenuItem.h"
 #include <vector>
 
 class Menu
 {
 public:
-	std::vector<Button> m_button;
-	// select item, mouse position, nav input
+	std::vector<MenuItem*> m_button;
+	bool focused;
 	void Select();
+	void UpdateFocus();
 };
 

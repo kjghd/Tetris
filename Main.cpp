@@ -77,35 +77,106 @@ int CALLBACK wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPWSTR lpCmd
 				break;
 
 			case WM_KEYDOWN:
-				input_1->SetDown(BTN_A,		0x41,		msg.wParam);
-				input_1->SetDown(BTN_D,		0x44,		msg.wParam);
-				input_1->SetDown(BTN_E,		0x45,		msg.wParam);
-				input_1->SetDown(BTN_Q,		0x51,		msg.wParam);
-				input_1->SetDown(BTN_S,		0x53,		msg.wParam);
-				input_1->SetDown(BTN_W,		0x57,		msg.wParam);
+			{
+				input_1->SetDown(BTN_0, 0x30, msg.wParam);
+				input_1->SetDown(BTN_1, 0x31, msg.wParam);
+				input_1->SetDown(BTN_2, 0x32, msg.wParam);
+				input_1->SetDown(BTN_3, 0x33, msg.wParam);
+				input_1->SetDown(BTN_4, 0x34, msg.wParam);
+				input_1->SetDown(BTN_5, 0x35, msg.wParam);
+				input_1->SetDown(BTN_6, 0x36, msg.wParam);
+				input_1->SetDown(BTN_7, 0x37, msg.wParam);
+				input_1->SetDown(BTN_8, 0x38, msg.wParam);
+				input_1->SetDown(BTN_9, 0x39, msg.wParam);
+
+				input_1->SetDown(BTN_A, 0x41, msg.wParam);
+				input_1->SetDown(BTN_B, 0x42, msg.wParam);
+				input_1->SetDown(BTN_C, 0x43, msg.wParam);
+				input_1->SetDown(BTN_D, 0x44, msg.wParam);
+				input_1->SetDown(BTN_E, 0x45, msg.wParam);
+				input_1->SetDown(BTN_F, 0x46, msg.wParam);
+				input_1->SetDown(BTN_G, 0x47, msg.wParam);
+				input_1->SetDown(BTN_H, 0x48, msg.wParam);
+				input_1->SetDown(BTN_I, 0x49, msg.wParam);
+				input_1->SetDown(BTN_J, 0x4A, msg.wParam);
+				input_1->SetDown(BTN_K, 0x4B, msg.wParam);
+				input_1->SetDown(BTN_L, 0x4C, msg.wParam);
+				input_1->SetDown(BTN_M, 0x4D, msg.wParam);
+				input_1->SetDown(BTN_N, 0x4E, msg.wParam);
+				input_1->SetDown(BTN_O, 0x4F, msg.wParam);
+				input_1->SetDown(BTN_P, 0x50, msg.wParam);
+				input_1->SetDown(BTN_Q, 0x51, msg.wParam);
+				input_1->SetDown(BTN_R, 0x52, msg.wParam);
+				input_1->SetDown(BTN_S, 0x53, msg.wParam);
+				input_1->SetDown(BTN_T, 0x54, msg.wParam);
+				input_1->SetDown(BTN_U, 0x55, msg.wParam);
+				input_1->SetDown(BTN_V, 0x56, msg.wParam);
+				input_1->SetDown(BTN_W, 0x57, msg.wParam);
+				input_1->SetDown(BTN_X, 0x58, msg.wParam);
+				input_1->SetDown(BTN_Y, 0x59, msg.wParam);
+				input_1->SetDown(BTN_Z, 0x5A, msg.wParam);
+
 				input_1->SetDown(BTN_LEFT,	VK_LEFT,	msg.wParam);
 				input_1->SetDown(BTN_UP,	VK_UP,		msg.wParam);
 				input_1->SetDown(BTN_RIGHT, VK_RIGHT,	msg.wParam);
 				input_1->SetDown(BTN_DOWN,	VK_DOWN,	msg.wParam);
 				input_1->SetDown(BTN_SPACE, VK_SPACE,	msg.wParam);
 				input_1->SetDown(BTN_ENTER, VK_RETURN,	msg.wParam);
+				input_1->SetDown(BTN_BACK,	VK_BACK,	msg.wParam);
 				input_1->SetDown(BTN_ESC,	VK_ESCAPE,	msg.wParam);
 				break;
+			}
+
 			case WM_KEYUP:
-				input_1->SetUp(BTN_A,		0x41,		msg.wParam);
-				input_1->SetUp(BTN_D,		0x44,		msg.wParam);
-				input_1->SetUp(BTN_E,		0x45,		msg.wParam);
-				input_1->SetUp(BTN_Q,		0x51,		msg.wParam);
-				input_1->SetUp(BTN_S,		0x53,		msg.wParam);
-				input_1->SetUp(BTN_W,		0x57,		msg.wParam);
+			{
+				input_1->SetUp(BTN_0, 0x30, msg.wParam);
+				input_1->SetUp(BTN_1, 0x31, msg.wParam);
+				input_1->SetUp(BTN_2, 0x32, msg.wParam);
+				input_1->SetUp(BTN_3, 0x33, msg.wParam);
+				input_1->SetUp(BTN_4, 0x34, msg.wParam);
+				input_1->SetUp(BTN_5, 0x35, msg.wParam);
+				input_1->SetUp(BTN_6, 0x36, msg.wParam);
+				input_1->SetUp(BTN_7, 0x37, msg.wParam);
+				input_1->SetUp(BTN_8, 0x38, msg.wParam);
+				input_1->SetUp(BTN_9, 0x39, msg.wParam);
+
+				input_1->SetUp(BTN_A, 0x41, msg.wParam);
+				input_1->SetUp(BTN_B, 0x42, msg.wParam);
+				input_1->SetUp(BTN_C, 0x43, msg.wParam);
+				input_1->SetUp(BTN_D, 0x44, msg.wParam);
+				input_1->SetUp(BTN_E, 0x45, msg.wParam);
+				input_1->SetUp(BTN_F, 0x46, msg.wParam);
+				input_1->SetUp(BTN_G, 0x47, msg.wParam);
+				input_1->SetUp(BTN_H, 0x48, msg.wParam);
+				input_1->SetUp(BTN_I, 0x49, msg.wParam);
+				input_1->SetUp(BTN_J, 0x4A, msg.wParam);
+				input_1->SetUp(BTN_K, 0x4B, msg.wParam);
+				input_1->SetUp(BTN_L, 0x4C, msg.wParam);
+				input_1->SetUp(BTN_M, 0x4D, msg.wParam);
+				input_1->SetUp(BTN_N, 0x4E, msg.wParam);
+				input_1->SetUp(BTN_O, 0x4F, msg.wParam);
+				input_1->SetUp(BTN_P, 0x50, msg.wParam);
+				input_1->SetUp(BTN_Q, 0x51, msg.wParam);
+				input_1->SetUp(BTN_R, 0x52, msg.wParam);
+				input_1->SetUp(BTN_S, 0x53, msg.wParam);
+				input_1->SetUp(BTN_T, 0x54, msg.wParam);
+				input_1->SetUp(BTN_U, 0x55, msg.wParam);
+				input_1->SetUp(BTN_V, 0x56, msg.wParam);
+				input_1->SetUp(BTN_W, 0x57, msg.wParam);
+				input_1->SetUp(BTN_X, 0x58, msg.wParam);
+				input_1->SetUp(BTN_Y, 0x59, msg.wParam);
+				input_1->SetUp(BTN_Z, 0x5A, msg.wParam);
+
 				input_1->SetUp(BTN_LEFT,	VK_LEFT,	msg.wParam);
 				input_1->SetUp(BTN_UP,		VK_UP,		msg.wParam);
 				input_1->SetUp(BTN_RIGHT,	VK_RIGHT,	msg.wParam);
 				input_1->SetUp(BTN_DOWN,	VK_DOWN,	msg.wParam);
 				input_1->SetUp(BTN_SPACE,	VK_SPACE,	msg.wParam);
 				input_1->SetUp(BTN_ENTER,	VK_RETURN,	msg.wParam);
+				input_1->SetUp(BTN_BACK,	VK_BACK,	msg.wParam);
 				input_1->SetUp(BTN_ESC,		VK_ESCAPE,	msg.wParam);
 				break;
+			}
 			}
 			TranslateMessage(&msg);
 			DispatchMessage(&msg);

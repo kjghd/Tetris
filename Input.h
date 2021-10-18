@@ -11,15 +11,43 @@ struct ButtonState
 
 enum Buttons
 {
-	BTN_LMB,
-	BTN_RMB,
+	BTN_0,
+	BTN_1,
+	BTN_2,
+	BTN_3,
+	BTN_4,
+	BTN_5,
+	BTN_6,
+	BTN_7,
+	BTN_8,
+	BTN_9,
 
 	BTN_A,
+	BTN_B,
+	BTN_C,
 	BTN_D,
 	BTN_E,
+	BTN_F,
+	BTN_G,
+	BTN_H,
+	BTN_I,
+	BTN_J,
+	BTN_K,
+	BTN_L,
+	BTN_M,
+	BTN_N,
+	BTN_O,
+	BTN_P,
 	BTN_Q,
+	BTN_R,
 	BTN_S,
+	BTN_T,
+	BTN_U,
+	BTN_V,
 	BTN_W,
+	BTN_X,
+	BTN_Y,
+	BTN_Z,
 
 	BTN_LEFT,
 	BTN_UP,
@@ -28,7 +56,12 @@ enum Buttons
 
 	BTN_SPACE,
 	BTN_ENTER,
+	BTN_BACK,
 	BTN_ESC,
+
+	BTN_LMB,
+	BTN_RMB,
+
 
 	BTN_COUNT
 };
@@ -54,6 +87,7 @@ public:
 	bool CheckDown(int button);
 	bool CheckReleased(int button);
 
+	int GetKeyPressed();
 };
 
 extern std::unique_ptr<Input> input_1;

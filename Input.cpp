@@ -47,4 +47,15 @@ bool Input::CheckReleased(int button)
 	return !m_button[button].down && m_button[button].moved ? true : false;
 }
 
+int Input::GetKeyPressed()
+{
+	for (size_t i(0); i < BTN_COUNT; ++i)
+	{
+		if (m_button[i].down && m_button[i].moved)
+		{
+			return i;
+		}
+	}
+}
+
 std::unique_ptr<Input> input_1{ new Input };

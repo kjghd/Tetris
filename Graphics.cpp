@@ -82,12 +82,14 @@ void Graphics::DrawBitmapArea(ID2D1Bitmap** ppBmp, D2D1_RECT_F destination, D2D1
 {
 	D2D1_RECT_F rc
 	{
-		destination.left / 1.25,
-		destination.top / 1.25,
-		destination.right / 1.25,
-		destination.bottom / 1.25
+		destination.left / 1.25f,
+		destination.top / 1.25f,
+		destination.right / 1.25f,
+		destination.bottom / 1.25f
 	};
+	//pRenderTarget->DrawBitmap(*ppBmp, rc, 1.f, D2D1_BITMAP_INTERPOLATION_MODE_NEAREST_NEIGHBOR, uv_area);
 	pRenderTarget->DrawBitmap(*ppBmp, rc, 1.f, D2D1_BITMAP_INTERPOLATION_MODE_NEAREST_NEIGHBOR, uv_area);
+
 }
 
 

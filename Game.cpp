@@ -49,7 +49,8 @@ enum GameStates
 	GAME_LEVELS,
 	GAME_PAUSE,
 	GAME_PLAY,
-	GAME_LOSE
+	GAME_LOSE,
+	GAME_SCORES
 };
 int GameState;
 enum PlayStates
@@ -71,6 +72,7 @@ D2D1_RECT_F area_level;
 D2D1_RECT_F area_title;
 float character_width;
 float character_height;
+std::vector<int> highscores;
 
 // Game Objects
 Grid grid;
@@ -78,12 +80,140 @@ std::unique_ptr<Player> player;
 Pool pool;
 Counter counter_score;
 Counter counter_level;
+std::array<Counter, 5> vcounter_highscore;
 Piece piece_next;
 Piece piece_held;
 Menu menu_pause;
 Menu menu_lose;
 Menu menu_main;
 Menu menu_levels;
+Menu menu_highscore;
+
+// Game Functions
+bool WriteToFile(std::string buffer)
+{
+	// Access file
+	HANDLE scoreFile = CreateFile(L"Saves/highscore.txt", GENERIC_WRITE, FILE_SHARE_READ, NULL, CREATE_NEW, FILE_ATTRIBUTE_NORMAL, NULL);
+	DWORD error = GetLastError();
+	if (error == 0) // No file exists.
+	{
+		OutputDebugString(L"Created new file.\n");
+	}
+	else if (error == 80) // File already exists.
+	{
+		OutputDebugString(L"Replacing file.\n");
+		DeleteFile(L"Saves/highscore.txt");
+		scoreFile = CreateFile(L"Saves/highscore.txt", GENERIC_WRITE, FILE_SHARE_READ, NULL, CREATE_NEW, FILE_ATTRIBUTE_NORMAL, NULL);
+	}
+
+	OutputDebugString(L"Writing to file...\n");
+
+	// Debug data being written.
+	std::wstring wstr;
+	wstr.assign(buffer.begin(), buffer.end());
+	OutputDebugString(L"Buffer: ");
+	OutputDebugString(wstr.c_str());
+	OutputDebugString(L"\n");
+
+	// Debug buffer size.
+	DWORD bytesToWrite = buffer.size();
+	OutputDebugString(L"Bytes: ");
+	OutputDebugString(std::to_wstring(bytesToWrite).c_str());
+	OutputDebugString(L"\n");
+
+	DWORD bytesWritten;
+
+	WriteFile(scoreFile, &buffer.front(), bytesToWrite, &bytesWritten, NULL);
+	CloseHandle(scoreFile);
+
+	OutputDebugString(L"\n");
+
+	return true;
+}
+bool SetHighscore()
+{
+	OutputDebugString(L"Reading File...\n");
+	HANDLE scoreFile = CreateFile(L"Saves/highscore.txt", GENERIC_READ, FILE_SHARE_READ, NULL, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
+	DWORD error = GetLastError();
+	if (error == ERROR_FILE_NOT_FOUND)
+	{
+		OutputDebugString(L"Could not obtain handle to file; file not found.\n");
+		return false;
+	}
+	else
+	{
+		OutputDebugString(L"Obtained handle to file.\n");
+	}
+
+	std::string buffer;
+	LARGE_INTEGER fileSize;
+	GetFileSizeEx(scoreFile, &fileSize);
+	buffer.resize(fileSize.QuadPart);
+
+	DWORD bytesRead;
+
+	BOOL read = ReadFile(scoreFile, &buffer.front(), fileSize.QuadPart, &bytesRead, NULL);
+	if (read == FALSE)
+	{
+		OutputDebugString(L"Could not read file.\n");
+		return false;
+	}
+	else
+	{
+		OutputDebugString(L"Read file successfully:\n");
+		std::wstring wstr;
+		wstr.assign(buffer.begin(), buffer.end());
+		OutputDebugString(wstr.c_str());
+	}
+
+	CloseHandle(scoreFile);
+	error = GetLastError();
+
+	// Set highscores from buffer.
+	std::string str_tmp;
+	highscores.clear();
+	for (const auto& ch : buffer)
+	{
+		if (ch != '\n')
+		{
+			str_tmp.push_back(ch);
+		}
+		else
+		{
+			highscores.push_back(std::stoi(str_tmp));
+			str_tmp.clear();
+		}
+	}
+
+	// update highscore counters
+	for (size_t i = 0; i < vcounter_highscore.size(); i++)
+		vcounter_highscore.at(i).value = highscores.at(i);
+
+	return true;
+}
+void AddHighscore()
+{
+	// Place score
+	for (size_t i = 0; i < highscores.size(); i++)
+	{
+		if (counter_score.value > highscores.at(i))
+		{
+			highscores.insert(highscores.begin() + i, counter_score.value);
+			break;
+		}
+	}
+
+	// Convert score to string for writing to a file.
+	std::string buffer;
+	for (const auto& score : highscores)
+	{
+		buffer += std::to_string(score) + "\n";
+	}
+	if (buffer.empty()) buffer.push_back('0');
+
+	WriteToFile(buffer);
+}
+
 
 /********************** Main game functions **********************/
 void GameInit(HWND hWnd)
@@ -301,6 +431,8 @@ void GameInit(HWND hWnd)
 	dropSpeed = 0;
 	character_width = 32.f;
 	character_height = 96.f;
+	if (!SetHighscore()) highscores.clear();
+
 
 	// init game objects
 	{
@@ -348,10 +480,11 @@ void GameInit(HWND hWnd)
 		// player
 		player = std::make_unique<Player>(grid.size);
 		player->timer_down = 80.f;
-		player->timer_down_initial = 200.f;
+		player->timer_down_initial = 150.f;
 		player->timer_fall = 800.f;
 		player->timer_side = 120.f;
 		player->timer_side_initial = 200.f;
+		player->timer_land = 1000.f;
 
 		// pool
 		pool.Init(&grid.size);
@@ -399,7 +532,6 @@ void GameInit(HWND hWnd)
 		};
 	}
 		
-
 	// Menus
 	{
 		float menuItem_height = screen_rect.bottom / 10.f;
@@ -418,39 +550,39 @@ void GameInit(HWND hWnd)
 		menu_pause.m_button.back()->size = { menuItem_width, menuItem_height };
 		menu_pause.m_button.back()->location = { screen_rect.right / 2.f, screen_rect.bottom / 2.f - menuItem_height / 2.f - menuSpacing / 2.f };
 		menu_pause.m_button.back()->text = "RESUME";
-		menu_pause.m_button.back()->text_leftPadding = text_leftPadding;
-		menu_pause.m_button.back()->text_width = text_width;
-		menu_pause.m_button.back()->text_height = text_height;
-		menu_pause.m_button.back()->text_spacing = text_spacing;
 			// to menu
 		menu_pause.m_button.push_back(new MenuPortal());
 		menu_pause.m_button.back()->size = { menuItem_width, menuItem_height };
 		menu_pause.m_button.back()->location = { screen_rect.right / 2.f, screen_rect.bottom / 2.f + menuItem_height / 2.f + menuSpacing / 2.f };
 		menu_pause.m_button.back()->text = "MAIN MENU";
-		menu_pause.m_button.back()->text_leftPadding = text_leftPadding;
-		menu_pause.m_button.back()->text_width = text_width;
-		menu_pause.m_button.back()->text_height = text_height;
-		menu_pause.m_button.back()->text_spacing = text_spacing;
+			// button style
+		for (auto& btn : menu_pause.m_button)
+		{
+			btn->text_leftPadding = text_leftPadding;
+			btn->text_width = text_width;
+			btn->text_height = text_height;
+			btn->text_spacing = text_spacing;
+		}
 
-		// Pause
-			// resume
+		// Game Over
+			// retry
 		menu_lose.m_button.push_back(new MenuPortal());
 		menu_lose.m_button.back()->size = { menuItem_width, menuItem_height };
 		menu_lose.m_button.back()->location = { screen_rect.right / 2.f, screen_rect.bottom / 2.f - menuItem_height / 2.f - menuSpacing / 2.f };
 		menu_lose.m_button.back()->text = "RETRY";
-		menu_lose.m_button.back()->text_leftPadding = text_leftPadding;
-		menu_lose.m_button.back()->text_width = text_width;
-		menu_lose.m_button.back()->text_height = text_height;
-		menu_lose.m_button.back()->text_spacing = text_spacing;
 			// to menu
 		menu_lose.m_button.push_back(new MenuPortal());
 		menu_lose.m_button.back()->size = { menuItem_width, menuItem_height };
 		menu_lose.m_button.back()->location = { screen_rect.right / 2.f, screen_rect.bottom / 2.f + menuItem_height / 2.f + menuSpacing / 2.f };
 		menu_lose.m_button.back()->text = "MAIN MENU";
-		menu_lose.m_button.back()->text_leftPadding = text_leftPadding;
-		menu_lose.m_button.back()->text_width = text_width;
-		menu_lose.m_button.back()->text_height = text_height;
-		menu_lose.m_button.back()->text_spacing = text_spacing;
+			// button style
+		for (auto& btn : menu_lose.m_button)
+		{
+			btn->text_leftPadding = text_leftPadding;
+			btn->text_width = text_width;
+			btn->text_height = text_height;
+			btn->text_spacing = text_spacing;
+		}
 
 		// Main
 			// play from lv1
@@ -458,28 +590,29 @@ void GameInit(HWND hWnd)
 		menu_main.m_button.back()->size = { menuItem_width, menuItem_height };
 		menu_main.m_button.back()->location = { screen_rect.right / 2.f, screen_rect.bottom / 2.f - menuItem_height - menuSpacing};
 		menu_main.m_button.back()->text = "NEW GAME";
-		menu_main.m_button.back()->text_leftPadding = text_leftPadding;
-		menu_main.m_button.back()->text_width = text_width;
-		menu_main.m_button.back()->text_height = text_height;
-		menu_main.m_button.back()->text_spacing = text_spacing;
 			// to level selection
 		menu_main.m_button.push_back(new MenuPortal());
 		menu_main.m_button.back()->size = { menuItem_width, menuItem_height };
 		menu_main.m_button.back()->location = { screen_rect.right / 2.f, screen_rect.bottom / 2.f };
 		menu_main.m_button.back()->text = "LEVEL SELECT";
-		menu_main.m_button.back()->text_leftPadding = text_leftPadding;
-		menu_main.m_button.back()->text_width = text_width;
-		menu_main.m_button.back()->text_height = text_height;
-		menu_main.m_button.back()->text_spacing = text_spacing;
-			// quit game
+			// Show high scores
 		menu_main.m_button.push_back(new MenuPortal());
 		menu_main.m_button.back()->size = { menuItem_width, menuItem_height };
 		menu_main.m_button.back()->location = { screen_rect.right / 2.f, screen_rect.bottom / 2.f + menuItem_height + menuSpacing};
+		menu_main.m_button.back()->text = "HIGH SCORES";
+			// quit game
+		menu_main.m_button.push_back(new MenuPortal());
+		menu_main.m_button.back()->size = { menuItem_width, menuItem_height };
+		menu_main.m_button.back()->location = { screen_rect.right / 2.f, screen_rect.bottom / 2.f + 2.f * (menuItem_height + menuSpacing) };
 		menu_main.m_button.back()->text = "QUIT";
-		menu_main.m_button.back()->text_leftPadding = text_leftPadding;
-		menu_main.m_button.back()->text_width = text_width;
-		menu_main.m_button.back()->text_height = text_height;
-		menu_main.m_button.back()->text_spacing = text_spacing;
+			// button style
+		for (auto& btn : menu_main.m_button)
+		{
+			btn->text_leftPadding = text_leftPadding;
+			btn->text_width = text_width;
+			btn->text_height = text_height;
+			btn->text_spacing = text_spacing;
+		}
 
 		// Level Select
 			// play
@@ -487,28 +620,48 @@ void GameInit(HWND hWnd)
 		menu_levels.m_button.back()->size = { menuItem_width, menuItem_height };
 		menu_levels.m_button.back()->location = { screen_rect.right / 2.f, screen_rect.bottom / 2.f - menuItem_height - menuSpacing };
 		menu_levels.m_button.back()->text = "PLAY";
-		menu_levels.m_button.back()->text_leftPadding = text_leftPadding;
-		menu_levels.m_button.back()->text_width = text_width;
-		menu_levels.m_button.back()->text_height = text_height;
-		menu_levels.m_button.back()->text_spacing = text_spacing;
 			// levels
 		menu_levels.m_button.push_back(new MenuValue());
 		menu_levels.m_button.back()->size = { menuItem_width, menuItem_height };
 		menu_levels.m_button.back()->location = { screen_rect.right / 2.f, screen_rect.bottom / 2.f };
 		menu_levels.m_button.back()->text = "LEVEL";
-		menu_levels.m_button.back()->text_leftPadding = text_leftPadding;
-		menu_levels.m_button.back()->text_width = text_width;
-		menu_levels.m_button.back()->text_height = text_height;
-		menu_levels.m_button.back()->text_spacing = text_spacing;
-		// back to menu
+			// back to menu
 		menu_levels.m_button.push_back(new MenuPortal());
 		menu_levels.m_button.back()->size = { menuItem_width, menuItem_height };
 		menu_levels.m_button.back()->location = { screen_rect.right / 2.f, screen_rect.bottom / 2.f + menuItem_height + menuSpacing };
 		menu_levels.m_button.back()->text = "BACK";
-		menu_levels.m_button.back()->text_leftPadding = text_leftPadding;
-		menu_levels.m_button.back()->text_width = text_width;
-		menu_levels.m_button.back()->text_height = text_height;
-		menu_levels.m_button.back()->text_spacing = text_spacing;
+			// button style
+		for (auto& btn : menu_levels.m_button)
+		{
+			btn->text_leftPadding = text_leftPadding;
+			btn->text_width = text_width;
+			btn->text_height = text_height;
+			btn->text_spacing = text_spacing;
+		}
+
+		// Highscores
+			// counter style
+		for (auto& cntr : vcounter_highscore)
+		{
+			cntr.digit_height = 34.f;
+			cntr.digit_width = 18.f;
+			cntr.digit_spacing = 20.f;
+		}
+			// counter location
+		vcounter_highscore.at(0).location = { screen_rect.right / 2.f, screen_rect.bottom / 7.f									 };
+		vcounter_highscore.at(1).location = { screen_rect.right / 2.f, screen_rect.bottom / 7.f + screen_rect.bottom / 7.f		 };
+		vcounter_highscore.at(2).location = { screen_rect.right / 2.f, screen_rect.bottom / 7.f + screen_rect.bottom / 7.f * 2.f };
+		vcounter_highscore.at(3).location = { screen_rect.right / 2.f, screen_rect.bottom / 7.f + screen_rect.bottom / 7.f * 3.f };
+		vcounter_highscore.at(4).location = { screen_rect.right / 2.f, screen_rect.bottom / 7.f + screen_rect.bottom / 7.f * 4.f };
+			// back to menu
+		menu_highscore.m_button.push_back(new MenuPortal());
+		menu_highscore.m_button.back()->size = { menuItem_width, menuItem_height };
+		menu_highscore.m_button.back()->location = { screen_rect.right / 2.f, screen_rect.bottom / 7.f + screen_rect.bottom / 7.f * 5.f };
+		menu_highscore.m_button.back()->text = "BACK";
+		menu_highscore.m_button.back()->text_leftPadding = text_leftPadding;
+		menu_highscore.m_button.back()->text_width = text_width;
+		menu_highscore.m_button.back()->text_height = text_height;
+		menu_highscore.m_button.back()->text_spacing = text_spacing;
 	}
 		
 }
@@ -673,6 +826,8 @@ void GameUpdate(float dt)
 
 			}
 
+			player->timer_down = dropSpeed / 10.f;
+
 
 			// reset player to top and assign new values
 			player->location = { grid.size.x / 2 - 2, -1 };
@@ -711,6 +866,7 @@ void GameUpdate(float dt)
 				Square tmp{ sqr.x + player->location.x, sqr.y + player->location.y };
 				if (std::find(pool.vSquare.begin(), pool.vSquare.end(), tmp) != pool.vSquare.end())
 				{
+					AddHighscore();
 					GameState = GAME_LOSE;
 					break;
 				}
@@ -723,31 +879,46 @@ void GameUpdate(float dt)
 		case PLAY_MOVING:
 		{
 			// timers
-			player->UpdateTimers(deltaTime);
+			player->UpdateMoveTimers(deltaTime);
 
-			// move down
-			if (input_1->CheckPressed(BTN_S))
+			if (!player->Landed(&pool))
 			{
-				player->timer_down_initial_update = 0;
-				player->timer_fall_update = 0;
-				player->Move(0, 1, &pool);
-			}
-			else if (input_1->CheckDown(BTN_S) &&
-				player->timer_down_initial_update > player->timer_down_initial &&
-				player->timer_down_update > player->timer_down)
-			{
-				player->timer_down_update = 0;
-				player->timer_fall_update = 0;
-				player->Move(0, 1, &pool);
-			}
+				player->timer_land_update = 0;
 
-			// fall or land
-			else if (player->timer_fall_update > dropSpeed)
+				// move down
+				if (input_1->CheckPressed(BTN_S))
+				{
+					player->timer_down_initial_update = 0;
+					player->timer_fall_update = 0;
+					player->Move(0, 1, &pool);
+				}
+				else if (input_1->CheckDown(BTN_S) &&
+					player->timer_down_initial_update > player->timer_down_initial &&
+					player->timer_down_update > player->timer_down)
+				{
+					player->timer_down_update = 0;
+					player->timer_fall_update = 0;
+					player->Move(0, 1, &pool);
+				}
+
+				// fall
+				else if (player->timer_fall_update > dropSpeed)
+				{
+					player->timer_fall_update = 0;
+					player->Move(0, 1, &pool);
+				}
+			}
+			// land
+			else
 			{
-				player->timer_fall_update = 0;
-				if (!player->Move(0, 1, &pool))
+				player->timer_land_update += deltaTime;
+				if (player->timer_land_update > player->timer_land)
+				{
 					PlayState = PLAY_CHECKING;
+				}
 			}
+
+
 
 			// move left
 			if (input_1->CheckPressed(BTN_A))
@@ -862,8 +1033,15 @@ void GameUpdate(float dt)
 			GameState = GAME_LEVELS;
 		}
 
-		// quit game
+		// highscores
 		else if (input_1->CheckReleased(BTN_LMB) && menu_main.m_button.at(2)->hover)
+		{
+			SetHighscore();
+			GameState = GAME_SCORES;
+		}
+
+		// quit game
+		else if (input_1->CheckReleased(BTN_LMB) && menu_main.m_button.at(3)->hover)
 		{
 			PostQuitMessage(0);
 		}
@@ -941,6 +1119,19 @@ void GameUpdate(float dt)
 			GameState = GAME_MAINMENU;
 		}
 
+		break;
+	}
+
+	case GAME_SCORES:
+	{
+		menu_highscore.UpdateFocus();
+		menu_highscore.Select();
+
+		// back to main menu
+		if (input_1->CheckReleased(BTN_LMB) && menu_highscore.m_button.at(0)->hover)
+		{
+			GameState = GAME_MAINMENU;
+		}
 		break;
 	}
 	}
@@ -1095,6 +1286,34 @@ void GameRender()
 			else if (item->hover)
 				graphics->DrawBitmap(&pButton_on.p, item->GetRect());
 			else
+				graphics->DrawBitmap(&pButton.p, item->GetRect());
+
+			for (size_t i = 0; i < item->text.size(); i++)
+				graphics->DrawBitmapArea(
+					&pBMP_Characters.p,
+					item->GetTextRect(i),
+					item->GetTextUVRect(i, character_width, character_height)
+				);
+		}
+		break;
+	}
+
+	case GAME_SCORES:
+	{
+		graphics->ClearScreen();
+
+		// draw scores
+		for (auto& cntr : vcounter_highscore)
+		{
+			for (size_t i = 0; i < cntr.GetLength(); i++)
+				graphics->DrawBitmapArea(&pNumber.p, cntr.GetRect(i), cntr.GetSpriteRect(cntr.GetDigit(i)));
+		}
+
+		// draw back button
+		for (const auto& item : menu_highscore.m_button)
+		{
+			item->hover ?
+				graphics->DrawBitmap(&pButton_on.p, item->GetRect()) :
 				graphics->DrawBitmap(&pButton.p, item->GetRect());
 
 			for (size_t i = 0; i < item->text.size(); i++)

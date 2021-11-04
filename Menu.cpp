@@ -1,6 +1,12 @@
 #include "Menu.h"
 #include "Input.h"
 
+Menu::Menu()
+	:
+	focused(false)
+{
+}
+
 void Menu::Select()
 {
 	// check if mouse over MenuItem

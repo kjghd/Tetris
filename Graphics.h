@@ -1,7 +1,7 @@
 #pragma once
 #include <d2d1.h>
 #include <wincodec.h>
-#include <atlbase.h>
+#include <atlbase.h> // CComPtr
 
 class ComLibrary // Manages CoInitiazeEx and CoUnitialize so the COM Library may close after CComPtrs have released.
 {

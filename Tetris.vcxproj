@@ -147,6 +147,7 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="Audio.cpp" />
     <ClCompile Include="Button.cpp" />
     <ClCompile Include="Counter.cpp" />
     <ClCompile Include="Game.cpp" />
@@ -166,6 +167,7 @@
     <ClCompile Include="Slider.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="Audio.h" />
     <ClInclude Include="Button.h" />
     <ClInclude Include="Coord.h" />
     <ClInclude Include="Counter.h" />

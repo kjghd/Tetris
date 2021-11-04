@@ -1,5 +1,13 @@
 #include "Input.h"
 
+Input::Input()
+	:
+	Mouse({ 0,0 }),
+	MouseDown({ 0,0 })
+{
+	OutputDebugString(L"Created an Input\n");
+};
+
 void Input::SetMovedFalse()
 {
 	for (size_t i = 0; i < BTN_COUNT; i++)

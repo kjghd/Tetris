@@ -81,7 +81,7 @@ Pool pool;
 Counter counter_score;
 Counter counter_level;
 std::array<Counter, 5> vcounter_highscore;
-Piece piece_next;
+Piece piece_next;                                                                            
 Piece piece_held;
 Menu menu_pause;
 Menu menu_lose;
@@ -145,14 +145,15 @@ bool SetHighscore()
 		OutputDebugString(L"Obtained handle to file.\n");
 	}
 
-	std::string buffer;
 	LARGE_INTEGER fileSize;
 	GetFileSizeEx(scoreFile, &fileSize);
-	buffer.resize(fileSize.QuadPart);
+
+	std::string buffer;
+	buffer.resize(static_cast<unsigned int>(fileSize.QuadPart));
 
 	DWORD bytesRead;
 
-	BOOL read = ReadFile(scoreFile, &buffer.front(), fileSize.QuadPart, &bytesRead, NULL);
+	BOOL read = ReadFile(scoreFile, &buffer.front(), static_cast<DWORD>(fileSize.QuadPart), &bytesRead, NULL);
 	if (read == FALSE)
 	{
 		OutputDebugString(L"Could not read file.\n");
@@ -184,6 +185,14 @@ bool SetHighscore()
 			str_tmp.clear();
 		}
 	}
+	// ensure there's enough scores for the score board
+	if (highscores.size() < 5)
+	{
+		int length(highscores.size());
+		for (int i = 0; i < 5 - length; i++)
+			highscores.push_back(0);
+	}
+
 
 	// update highscore counters
 	for (size_t i = 0; i < vcounter_highscore.size(); i++)
@@ -605,6 +614,11 @@ void GameInit(HWND hWnd)
 		menu_main.m_button.back()->size = { menuItem_width, menuItem_height };
 		menu_main.m_button.back()->location = { screen_rect.right / 2.f, screen_rect.bottom / 2.f + 2.f * (menuItem_height + menuSpacing) };
 		menu_main.m_button.back()->text = "QUIT";
+			// play sound
+		menu_main.m_button.push_back(new MenuPortal());
+		menu_main.m_button.back()->size = { menuItem_width, menuItem_height };
+		menu_main.m_button.back()->location = { screen_rect.right / 2.f, screen_rect.bottom / 2.f + 3.f * (menuItem_height + menuSpacing) };
+		menu_main.m_button.back()->text = "Sound";
 			// button style
 		for (auto& btn : menu_main.m_button)
 		{
@@ -1045,6 +1059,12 @@ void GameUpdate(float dt)
 		{
 			PostQuitMessage(0);
 		}
+
+		// play sound
+		else if (input_1->CheckReleased(BTN_LMB) && menu_main.m_button.at(4)->hover)
+		{
+			OutputDebugString(L"Finish learing XAudio first.\n");
+		}
 		break;
 	}
 
@@ -1138,6 +1158,10 @@ void GameUpdate(float dt)
 	
 }
 
+void GameAudio()
+{
+}
+
 void GameRender()
 {
 	graphics->BeginDraw();
@@ -1201,7 +1225,7 @@ void GameRender()
 
 			// next piece
 			if (piece_next.active)
-				for (int i(0); i < piece_next.pattern->A.size(); ++i)
+				for (size_t i(0); i < piece_next.pattern->A.size(); ++i)
 					graphics->DrawBitmapArea(&pPiece.p, piece_next.GetRect(i), {
 						piece_next.pattern->colour * 1.f,
 						0,
@@ -1212,7 +1236,7 @@ void GameRender()
 
 			// held piece
 			if (piece_held.active)
-				for (int i(0); i < piece_held.pattern->A.size(); ++i)
+				for (size_t i(0); i < piece_held.pattern->A.size(); ++i)
 					graphics->DrawBitmapArea(&pPiece.p, piece_held.GetRect(i), {
 						piece_held.pattern->colour * 1.f,
 						0,
@@ -1222,11 +1246,11 @@ void GameRender()
 					);
 
 			// draw score
-			for (size_t i = 0; i < counter_score.GetLength(); i++)
+			for (int i = 0; i < counter_score.GetLength(); i++)
 				graphics->DrawBitmapArea(&pNumber.p, counter_score.GetRect(i), counter_score.GetSpriteRect(counter_score.GetDigit(i)));
 
 			// draw level
-			for (size_t i = 0; i < counter_level.GetLength(); i++)
+			for (int i = 0; i < counter_level.GetLength(); i++)
 				graphics->DrawBitmapArea(&pNumber.p, counter_level.GetRect(i), counter_level.GetSpriteRect(counter_level.GetDigit(i)));
 
 			// draw pool
@@ -1305,7 +1329,7 @@ void GameRender()
 		// draw scores
 		for (auto& cntr : vcounter_highscore)
 		{
-			for (size_t i = 0; i < cntr.GetLength(); i++)
+			for (int i = 0; i < cntr.GetLength(); i++)
 				graphics->DrawBitmapArea(&pNumber.p, cntr.GetRect(i), cntr.GetSpriteRect(cntr.GetDigit(i)));
 		}
 
@@ -1333,6 +1357,3 @@ void GameRender()
 void GameDestroy()
 {
 }
-
-
-

@@ -74,7 +74,7 @@ public:
 	D2D1_POINT_2F Mouse;
 	D2D1_POINT_2F MouseDown;
 
-	Input() { OutputDebugString(L"Created an Input\n"); };
+	Input();
 	~Input() { OutputDebugString(L"Destroyed an Input\n"); };
 
 	void SetMovedFalse();

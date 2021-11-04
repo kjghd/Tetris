@@ -87,6 +87,9 @@
     <ClCompile Include="MenuValue.cpp">
       <Filter>Menu\Source</Filter>
     </ClCompile>
+    <ClCompile Include="Audio.cpp">
+      <Filter>Framework\Source</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Graphics.h">
@@ -142,6 +145,9 @@
     </ClInclude>
     <ClInclude Include="MenuValue.h">
       <Filter>Menu\Header</Filter>
+    </ClInclude>
+    <ClInclude Include="Audio.h">
+      <Filter>Framework\Header</Filter>
     </ClInclude>
   </ItemGroup>
 </Project>
